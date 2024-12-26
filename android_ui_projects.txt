@@ -105,37 +105,58 @@ public class ToDoList extends AppCompatActivity {
     }
 }
 
-// File 6: DatabaseOperations.java
-// Solution for Question 8
-public class DatabaseOperations extends AppCompatActivity {
+
+//database
+package com.ar.animation;
+
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.os.Bundle;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+public class MainActivity extends AppCompatActivity {
     SQLiteDatabase database;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_database_operations);
+        setContentView(R.layout.activity_main);
 
+        // Open or create the database and table
         database = openOrCreateDatabase("AppDB", MODE_PRIVATE, null);
-        database.execSQL("CREATE TABLE IF NOT EXISTS Users(Id INTEGER PRIMARY KEY, Name TEXT);");
+        database.execSQL("CREATE TABLE IF NOT EXISTS Users(Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT);");
 
+        // Link UI components
         Button insertButton = findViewById(R.id.insert_button);
         Button displayButton = findViewById(R.id.display_button);
         EditText nameInput = findViewById(R.id.name_input);
         TextView displayOutput = findViewById(R.id.display_output);
 
+        // Insert data on button click
         insertButton.setOnClickListener(v -> {
             String name = nameInput.getText().toString();
-            database.execSQL("INSERT INTO Users(Name) VALUES('" + name + "');");
-            Toast.makeText(this, "Data Inserted", Toast.LENGTH_SHORT).show();
+            if (!name.isEmpty()) {
+                database.execSQL("INSERT INTO Users(Name) VALUES('" + name + "');");
+                Toast.makeText(this, "Data Inserted", Toast.LENGTH_SHORT).show();
+                nameInput.setText(""); // Clear input field
+            } else {
+                Toast.makeText(this, "Please enter a name", Toast.LENGTH_SHORT).show();
+            }
         });
 
+        // Display data on button click
         displayButton.setOnClickListener(v -> {
             Cursor cursor = database.rawQuery("SELECT * FROM Users;", null);
             StringBuilder data = new StringBuilder();
             while (cursor.moveToNext()) {
-                data.append(cursor.getInt(0)).append(" ").append(cursor.getString(1)).append("\n");
+                data.append("ID: ").append(cursor.getInt(0)).append(", Name: ").append(cursor.getString(1)).append("\n");
             }
-            displayOutput.setText(data.toString());
+            displayOutput.setText(data.length() > 0 ? data.toString() : "No data found");
             cursor.close();
         });
     }
@@ -143,31 +164,123 @@ public class DatabaseOperations extends AppCompatActivity {
 
 // File 7: QuizCompetition.java
 // Solution for Question 9
-public class QuizCompetition extends AppCompatActivity {
+package com.ar.animation;
+
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import java.util.ArrayList;
+
+public class MainActivity extends AppCompatActivity {
+
+    private TextView tvQuestion;
+    private RadioGroup rgOptions;
+    private Button btnNext;
+
+    private int currentQuestionIndex = 0;
+    private int score = 0;
+
+    private final ArrayList<Question> questions = new ArrayList<>();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_quiz_competition);
+        setContentView(R.layout.activity_main);
 
-        TextView questionText = findViewById(R.id.question_text);
-        RadioGroup optionsGroup = findViewById(R.id.options_group);
-        Button submitButton = findViewById(R.id.submit_button);
+        tvQuestion = findViewById(R.id.tv_question);
+        rgOptions = findViewById(R.id.rg_options);
+        btnNext = findViewById(R.id.btn_next);
 
-        String[] questions = {"Question 1", "Question 2"};
-        String[][] options = {{"Option A", "Option B", "Option C"}, {"Option D", "Option E", "Option F"}};
-        int currentQuestion = 0;
+        // Sample questions
+        questions.add(new Question("What is the capital of France?", "Paris", "London", "Berlin", "Rome", 1));
+        questions.add(new Question("Which planet is known as the Red Planet?", "Venus", "Earth", "Mars", "Jupiter", 3));
+        questions.add(new Question("What is 2 + 2?", "3", "4", "5", "6", 2));
 
-        submitButton.setOnClickListener(v -> {
-            int selectedId = optionsGroup.getCheckedRadioButtonId();
-            if (selectedId != -1) {
-                currentQuestion++;
-                if (currentQuestion < questions.length) {
-                    questionText.setText(questions[currentQuestion]);
-                } else {
-                    Toast.makeText(this, "Quiz Completed", Toast.LENGTH_SHORT).show();
-                }
+        loadQuestion();
+
+        btnNext.setOnClickListener(v -> {
+            int selectedOptionId = rgOptions.getCheckedRadioButtonId();
+            if (selectedOptionId == -1) {
+                Toast.makeText(this, "Please select an answer!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            int selectedAnswerIndex = rgOptions.indexOfChild(findViewById(selectedOptionId)) + 1;
+            if (selectedAnswerIndex == questions.get(currentQuestionIndex).getCorrectAnswer()) {
+                score++;
+            }
+
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.size()) {
+                loadQuestion();
+            } else {
+                showResults();
             }
         });
+    }
+
+    private void loadQuestion() {
+        rgOptions.clearCheck();
+        Question currentQuestion = questions.get(currentQuestionIndex);
+        tvQuestion.setText(currentQuestion.getQuestion());
+        ((RadioButton) rgOptions.getChildAt(0)).setText(currentQuestion.getOption1());
+        ((RadioButton) rgOptions.getChildAt(1)).setText(currentQuestion.getOption2());
+        ((RadioButton) rgOptions.getChildAt(2)).setText(currentQuestion.getOption3());
+        ((RadioButton) rgOptions.getChildAt(3)).setText(currentQuestion.getOption4());
+    }
+
+    private void showResults() {
+        Toast.makeText(this, "Quiz Over! Your score: " + score, Toast.LENGTH_LONG).show();
+        finish(); // Close the activity
+    }
+
+    static class Question {
+        private final String question;
+        private final String option1;
+        private final String option2;
+        private final String option3;
+        private final String option4;
+        private final int correctAnswer;
+
+        public Question(String question, String option1, String option2, String option3, String option4, int correctAnswer) {
+            this.question = question;
+            this.option1 = option1;
+            this.option2 = option2;
+            this.option3 = option3;
+            this.option4 = option4;
+            this.correctAnswer = correctAnswer;
+        }
+
+        public String getQuestion() {
+            return question;
+        }
+
+        public String getOption1() {
+            return option1;
+        }
+
+        public String getOption2() {
+            return option2;
+        }
+
+        public String getOption3() {
+            return option3;
+        }
+
+        public String getOption4() {
+            return option4;
+        }
+
+        public int getCorrectAnswer() {
+            return correctAnswer;
+        }
     }
 }
 
